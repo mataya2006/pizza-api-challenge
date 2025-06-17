@@ -1,19 +1,26 @@
 from flask import Flask
-from server import db, migrate 
-from server.config import Config
-from server.controllers.restaurant_controller import restaurant_bp
-from server.controllers.pizza_controller import pizza_bp
-from server.controllers.restaurant_pizza_controller import restaurant_pizza_bp
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+
+from .config import Config
+
+# Initialize extensions
+db = SQLAlchemy()
+migrate = Migrate()
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
     db.init_app(app)
-    migrate.init_app(app, db) 
+    migrate.init_app(app, db)
 
-    app.register_blueprint(restaurant_bp)
-    app.register_blueprint(pizza_bp)
-    app.register_blueprint(restaurant_pizza_bp)
+    
+
+    from .controllers import restaurant_controller, pizza_controller, restaurant_pizza_controller
+
+    app.register_blueprint(restaurant_controller.bp)
+    app.register_blueprint(pizza_controller.bp)
+    app.register_blueprint(restaurant_pizza_controller.bp)
 
     return app
