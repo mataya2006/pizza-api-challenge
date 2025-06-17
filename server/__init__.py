@@ -8,6 +8,6 @@ def create_app():
 
     db.init_app(app)
 
-    from server.models import restaurant, pizza, restaurant_pizza  # import AFTER db.init_app(app)
+    from server.models import restaurant, pizza, restaurant_pizza 
 
     return app
