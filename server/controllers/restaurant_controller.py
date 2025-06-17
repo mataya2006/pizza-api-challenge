@@ -1,50 +1,35 @@
-from flask import Blueprint, jsonify, abort
-from server.models import Restaurant, RestaurantPizza, db
+from flask import Blueprint, jsonify, request
+from server.models.restaurant import Restaurant
+from server.models.restaurant_pizza import RestaurantPizza
+from server.models import db  # Import db from models/__init__.py
 
-bp = Blueprint('restaurants', __name__, url_prefix='/restaurants')
+restaurants_bp = Blueprint('restaurants', __name__)
 
-@bp.route('', methods=['GET'])
+
+
+@restaurants_bp.route('/restaurants', methods=['GET'])
 def get_restaurants():
     restaurants = Restaurant.query.all()
-    data = []
-    for r in restaurants:
-        data.append({
-            'id': r.id,
-            'name': r.name,
-            'address': r.address
-        })
-    return jsonify(data), 200
+    return jsonify([restaurant.to_dict() for restaurant in restaurants])
 
-@bp.route('/<int:id>', methods=['GET'])
+@restaurants_bp.route('/restaurants/<int:id>', methods=['GET'])
 def get_restaurant(id):
-    r = Restaurant.query.get(id)
-    if not r:
+    restaurant = Restaurant.query.get(id)
+    if not restaurant:
         return jsonify({"error": "Restaurant not found"}), 404
+    
+    restaurant_data = restaurant.to_dict()
+    restaurant_data['pizzas'] = [rp.pizza.to_dict() for rp in restaurant.restaurant_pizzas]
+    
+    return jsonify(restaurant_data)
 
-    pizzas = []
-    for rp in r.restaurant_pizzas:
-        pizzas.append({
-            'id': rp.id,
-            'price': rp.price,
-            'pizza': {
-                'id': rp.pizza.id,
-                'name': rp.pizza.name,
-                'ingredients': rp.pizza.ingredients
-            }
-        })
-
-    return jsonify({
-        'id': r.id,
-        'name': r.name,
-        'address': r.address,
-        'pizzas': pizzas
-    }), 200
-
-@bp.route('/<int:id>', methods=['DELETE'])
+@restaurants_bp.route('/restaurants/<int:id>', methods=['DELETE'])
 def delete_restaurant(id):
-    r = Restaurant.query.get(id)
-    if not r:
+    restaurant = Restaurant.query.get(id)
+    if not restaurant:
         return jsonify({"error": "Restaurant not found"}), 404
-    db.session.delete(r)
+    
+    db.session.delete(restaurant)
     db.session.commit()
+    
     return '', 204

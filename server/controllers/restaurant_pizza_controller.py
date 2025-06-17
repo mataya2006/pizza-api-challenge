@@ -1,54 +1,28 @@
-from flask import Blueprint, request, jsonify
-from server.models import RestaurantPizza, Restaurant, Pizza, db
+from flask import Blueprint, jsonify, request
+from server.models import RestaurantPizza, db
+from sqlalchemy.exc import IntegrityError
 
-bp = Blueprint('restaurant_pizzas', __name__, url_prefix='/restaurant_pizzas')
+restaurant_pizzas_bp = Blueprint('restaurant_pizzas', __name__)
 
-@bp.route('', methods=['POST'])
+@restaurant_pizzas_bp.route('/restaurant_pizzas', methods=['POST'])
 def create_restaurant_pizza():
     data = request.get_json()
-
-    price = data.get('price')
-    pizza_id = data.get('pizza_id')
-    restaurant_id = data.get('restaurant_id')
-
-    errors = []
-
-    # Validate price
-    if not isinstance(price, int) or not (1 <= price <= 30):
-        errors.append("Price must be between 1 and 30")
-
-    # Validate foreign keys exist
-    pizza = Pizza.query.get(pizza_id)
-    if not pizza:
-        errors.append("Pizza not found")
-
-    restaurant = Restaurant.query.get(restaurant_id)
-    if not restaurant:
-        errors.append("Restaurant not found")
-
-    if errors:
-        return jsonify({"errors": errors}), 400
-
-    rp = RestaurantPizza(price=price, pizza_id=pizza_id, restaurant_id=restaurant_id)
-
-    db.session.add(rp)
-    db.session.commit()
-
-    response = {
-        "id": rp.id,
-        "price": rp.price,
-        "pizza_id": rp.pizza_id,
-        "restaurant_id": rp.restaurant_id,
-        "pizza": {
-            "id": pizza.id,
-            "name": pizza.name,
-            "ingredients": pizza.ingredients
-        },
-        "restaurant": {
-            "id": restaurant.id,
-            "name": restaurant.name,
-            "address": restaurant.address
-        }
-    }
-
-    return jsonify(response), 201
+    
+    try:
+        restaurant_pizza = RestaurantPizza(
+            price=data['price'],
+            pizza_id=data['pizza_id'],
+            restaurant_id=data['restaurant_id']
+        )
+        
+        db.session.add(restaurant_pizza)
+        db.session.commit()
+        
+        return jsonify(restaurant_pizza.to_dict()), 201
+    
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"errors": ["Validation error"]}), 400
+    
+    except ValueError as e:
+        return jsonify({"errors": [str(e)]}), 400
